@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - DIBA BandContest</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-light);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-brand">🎺 DIBA BandContest - Amministrazione</div>
+        <div class="navbar-user">
+            <span id="userEmail" style="margin-right: 1rem; color: var(--text-light);"></span>
+            <button onclick="handleLogout()" class="btn btn-outline">Esci</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="alert-container"></div>
+
+        <!-- Controllo Votazioni -->
+        <div class="card">
+            <h2>⚙️ Gestione Votazioni</h2>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <p id="voting-status-text" style="font-size: 1.1rem; margin-bottom: 0.5rem;">
+                        Stato: <strong id="status-label"></strong>
+                    </p>
+                    <p style="color: var(--text-light); font-size: 0.9rem;">
+                        Quando chiudi le votazioni, i giurati non potranno più modificare i voti
+                    </p>
+                </div>
+                <button id="toggle-voting-btn" class="btn" style="min-width: 200px;"></button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="card">
+            <div style="display: flex; gap: 1rem; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <button class="tab-btn active" data-tab="categories">Categorie</button>
+                <button class="tab-btn" data-tab="bands">Bande</button>
+                <button class="tab-btn" data-tab="votes">Voti</button>
+                <button class="tab-btn" data-tab="jury">Voti Giuria</button>
+                <button class="tab-btn" data-tab="results">Risultati</button>
+            </div>
+
+            <!-- Tab Categorie -->
+            <div id="tab-categories" class="tab-content active">
+                <h3>Gestione Categorie</h3>
+                
+                <form id="category-form" style="background: var(--bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label for="cat-nome">Nome Categoria *</label>
+                            <input type="text" id="cat-nome" class="form-control" required 
+                                   placeholder="es. Eccellenza">
+                        </div>
+                        <div class="form-group">
+                            <label for="cat-brano">Titolo Brano d'Obbligo *</label>
+                            <input type="text" id="cat-brano" class="form-control" required 
+                                   placeholder="es. Sinfonia n.1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="cat-autore">Autore Brano d'Obbligo *</label>
+                        <input type="text" id="cat-autore" class="form-control" required 
+                               placeholder="es. Giuseppe Verdi">
+                    </div>
+                    <div class="form-group">
+                        <label for="cat-ordinamento">Ordine (numero, più piccolo = più in alto)</label>
+                        <input type="number" id="cat-ordinamento" class="form-control" min="1" step="1" placeholder="es. 1">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Aggiungi Categoria</button>
+                </form>
+
+                <div id="categories-list"></div>
+            </div>
+
+            <!-- Tab Bande: elenco per categoria, senza voto giuria -->
+            <div id="tab-bands" class="tab-content">
+                <h3>Gestione Bande</h3>
+                
+                <form id="band-form" style="background: var(--bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label for="band-nome">Nome Banda *</label>
+                            <input type="text" id="band-nome" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="band-direttore">Direttore *</label>
+                            <input type="text" id="band-direttore" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label for="band-citta">Città *</label>
+                            <input type="text" id="band-citta" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="band-nazione">Nazione *</label>
+                            <input type="text" id="band-nazione" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label for="band-categoria">Categoria *</label>
+                            <select id="band-categoria" class="form-control" required>
+                                <option value="">Seleziona categoria</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="band-data">Data Esibizione *</label>
+                            <input type="date" id="band-data" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label for="band-titolo-libera">Titolo Brano Libera Scelta *</label>
+                            <input type="text" id="band-titolo-libera" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="band-autore-libera">Autore Brano Libera Scelta *</label>
+                            <input type="text" id="band-autore-libera" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Aggiungi Banda</button>
+                </form>
+
+                <div class="grid grid-2" style="margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label for="bands-category-filter">Categoria</label>
+                        <select id="bands-category-filter" class="form-control">
+                            <option value="">Tutte le categorie</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="bands-list"></div>
+            </div>
+
+            <!-- Tab Voti -->
+            <div id="tab-votes" class="tab-content">
+                <h3>Consultazione Voti dei Giurati</h3>
+                <div id="votes-list"></div>
+            </div>
+
+            <!-- Tab Voti Giuria: inserimento voto finale concorso -->
+            <div id="tab-jury" class="tab-content">
+                <h3>Voti Finali Giuria del Concorso</h3>
+
+                <div class="grid grid-2" style="margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label for="jury-category-filter">Categoria</label>
+                        <select id="jury-category-filter" class="form-control">
+                            <option value="">Seleziona categoria</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="jury-list" class="loading">Seleziona una categoria per vedere le bande e inserire i voti.</div>
+            </div>
+
+            <!-- Tab Risultati -->
+            <div id="tab-results" class="tab-content">
+                <h3>Risultati per Banda</h3>
+
+                <div class="grid grid-2" style="margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label for="results-category-filter">Categoria</label>
+                        <select id="results-category-filter" class="form-control">
+                            <option value="">Tutte le categorie</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="results-list" class="loading">Caricamento risultati...</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase, checkAuth, getUserProfile, logout } from './supabase-client.js';
+
+        let currentUser = null;
+        let categories = [];
+        let bands = [];
+        let votingsClosed = false;
+
+        window.handleLogout = async () => {
+            await logout();
+        };
+
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alert-container');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+            window.scrollTo(0, 0);
+        }
+
+        async function init() {
+            currentUser = await checkAuth();
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const userProfile = await getUserProfile(currentUser.id);
+            if (!userProfile || userProfile.ruolo !== 'admin') {
+                showAlert('Accesso negato. Solo gli admin possono accedere.', 'danger');
+                setTimeout(() => window.location.href = 'index.html', 2000);
+                return;
+            }
+
+            document.getElementById('userEmail').textContent = currentUser.email;
+
+            await loadVotingStatus();
+            await loadCategories();
+            await loadBands();
+            setupTabs();
+            setupForms();
+        }
+
+        async function loadVotingStatus() {
+            const { data, error } = await supabase
+                .from('stato_votazioni')
+                .select('votazioni_chiuse')
+                .eq('id', 1)
+                .single();
+
+            if (error) {
+                console.error('Errore caricamento stato:', error);
+                return;
+            }
+
+            votingsClosed = data.votazioni_chiuse;
+            updateVotingStatusUI();
+        }
+
+        function updateVotingStatusUI() {
+            const statusLabel = document.getElementById('status-label');
+            const toggleBtn = document.getElementById('toggle-voting-btn');
+
+            if (votingsClosed) {
+                statusLabel.textContent = 'Votazioni Chiuse';
+                statusLabel.style.color = 'var(--danger)';
+                toggleBtn.textContent = 'Riapri Votazioni';
+                toggleBtn.className = 'btn btn-secondary';
+            } else {
+                statusLabel.textContent = 'Votazioni Aperte';
+                statusLabel.style.color = 'var(--success)';
+                toggleBtn.textContent = 'Chiudi Votazioni';
+                toggleBtn.className = 'btn btn-danger';
+            }
+
+            toggleBtn.onclick = toggleVotingStatus;
+        }
+
+        async function toggleVotingStatus() {
+            const newStatus = !votingsClosed;
+            const confirmMsg = newStatus 
+                ? 'Sei sicuro di voler CHIUDERE le votazioni? I giurati non potranno più modificare i voti.'
+                : 'Sei sicuro di voler RIAPRIRE le votazioni? I giurati potranno modificare i voti.';
+
+            if (!confirm(confirmMsg)) return;
+
+            const { error } = await supabase
+                .from('stato_votazioni')
+                .update({ votazioni_chiuse: newStatus })
+                .eq('id', 1);
+
+            if (error) {
+                showAlert('Errore nell\'aggiornamento dello stato: ' + error.message, 'danger');
+                return;
+            }
+
+            votingsClosed = newStatus;
+            updateVotingStatusUI();
+            showAlert(
+                newStatus ? 'Votazioni chiuse con successo' : 'Votazioni riaperte con successo',
+                'success'
+            );
+        }
+
+        function setupTabs() {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetTab = btn.dataset.tab;
+
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+
+                    btn.classList.add('active');
+                    document.getElementById(`tab-${targetTab}`).classList.add('active');
+
+                    if (targetTab === 'votes') {
+                        loadVotes();
+                    } else if (targetTab === 'results') {
+                        loadResults();
+                    } else if (targetTab === 'jury') {
+                        // carica bande se serve
+                        loadJuryBandsForSelectedCategory();
+                    }
+                });
+            });
+        }
+
+        function setupForms() {
+            document.getElementById('category-form').addEventListener('submit', handleCategorySubmit);
+            document.getElementById('band-form').addEventListener('submit', handleBandSubmit);
+
+            document.getElementById('bands-category-filter').addEventListener('change', displayBands);
+            document.getElementById('jury-category-filter').addEventListener('change', loadJuryBandsForSelectedCategory);
+            document.getElementById('results-category-filter').addEventListener('change', loadResults);
+        }
+
+        async function loadCategories() {
+            const { data, error } = await supabase
+                .from('categorie')
+                .select('*')
+                .order('ordinamento', { ascending: true })
+                .order('nome', { ascending: true });
+
+            if (error) {
+                console.error('Errore caricamento categorie:', error);
+                return;
+            }
+
+            categories = data || [];
+            displayCategories();
+            populateCategorySelects();
+        }
+
+        function displayCategories() {
+            const container = document.getElementById('categories-list');
+
+            if (categories.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-light);">Nessuna categoria inserita</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Ordine</th>
+                            <th>Nome</th>
+                            <th>Brano d'Obbligo</th>
+                            <th>Autore</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${categories.map(cat => `
+                            <tr>
+                                <td>${cat.ordinamento ?? ''}</td>
+                                <td><strong>${cat.nome}</strong></td>
+                                <td>${cat.titolo_brano_obbligo}</td>
+                                <td>${cat.autore_brano_obbligo}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function populateCategorySelects() {
+            const bandSelect = document.getElementById('band-categoria');
+            const bandsFilter = document.getElementById('bands-category-filter');
+            const juryFilter = document.getElementById('jury-category-filter');
+            const resultsFilter = document.getElementById('results-category-filter');
+
+            bandSelect.innerHTML = '<option value="">Seleziona categoria</option>';
+            bandsFilter.innerHTML = '<option value="">Tutte le categorie</option>';
+            juryFilter.innerHTML = '<option value="">Seleziona categoria</option>';
+            resultsFilter.innerHTML = '<option value="">Tutte le categorie</option>';
+
+            categories.forEach(cat => {
+                const opt1 = document.createElement('option');
+                opt1.value = cat.id;
+                opt1.textContent = cat.nome;
+                bandSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = cat.id;
+                opt2.textContent = cat.nome;
+                bandsFilter.appendChild(opt2);
+
+                const opt3 = document.createElement('option');
+                opt3.value = cat.id;
+                opt3.textContent = cat.nome;
+                juryFilter.appendChild(opt3);
+
+                const opt4 = document.createElement('option');
+                opt4.value = cat.id;
+                opt4.textContent = cat.nome;
+                resultsFilter.appendChild(opt4);
+            });
+        }
+
+        async function handleCategorySubmit(e) {
+            e.preventDefault();
+
+            const ordinamentoRaw = document.getElementById('cat-ordinamento').value;
+            const ordinamento = ordinamentoRaw ? parseInt(ordinamentoRaw) : null;
+
+            const categoryData = {
+                nome: document.getElementById('cat-nome').value,
+                titolo_brano_obbligo: document.getElementById('cat-brano').value,
+                autore_brano_obbligo: document.getElementById('cat-autore').value,
+                ordinamento: ordinamento
+            };
+
+            const { error } = await supabase
+                .from('categorie')
+                .insert([categoryData]);
+
+            if (error) {
+                showAlert('Errore nell\'inserimento: ' + error.message, 'danger');
+                return;
+            }
+
+            showAlert('Categoria aggiunta con successo!', 'success');
+            e.target.reset();
+            await loadCategories();
+        }
+
+        async function loadBands() {
+            const { data, error } = await supabase
+                .from('bande')
+                .select(`
+                    *,
+                    categorie (nome)
+                `)
+                .order('data_esibizione')
+                .order('nome');
+
+            if (error) {
+                console.error('Errore caricamento bande:', error);
+                return;
+            }
+
+            bands = data || [];
+            displayBands();
+        }
+
+        function displayBands() {
+            const container = document.getElementById('bands-list');
+            const selectedCategory = document.getElementById('bands-category-filter').value || null;
+
+            let visibleBands = [...bands];
+            if (selectedCategory) {
+                visibleBands = visibleBands.filter(b => b.categoria_id === selectedCategory);
+            }
+
+            if (visibleBands.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-light);">Nessuna banda trovata per la categoria selezionata</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="overflow-x: auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Banda</th>
+                                <th>Categoria</th>
+                                <th>Direttore</th>
+                                <th>Città</th>
+                                <th>Data</th>
+                                <th>Brano Libera Scelta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${visibleBands.map(band => `
+                                <tr>
+                                    <td><strong>${band.nome}</strong></td>
+                                    <td>${band.categorie.nome}</td>
+                                    <td>${band.direttore}</td>
+                                    <td>${band.citta}, ${band.nazione}</td>
+                                    <td>${formatDate(band.data_esibizione)}</td>
+                                    <td>${band.titolo_brano_libera_scelta}<br>
+                                        <small style="color: var(--text-light);">${band.autore_brano_libera_scelta}</small>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function handleBandSubmit(e) {
+            e.preventDefault();
+
+            const bandData = {
+                nome: document.getElementById('band-nome').value,
+                direttore: document.getElementById('band-direttore').value,
+                citta: document.getElementById('band-citta').value,
+                nazione: document.getElementById('band-nazione').value,
+                categoria_id: document.getElementById('band-categoria').value,
+                data_esibizione: document.getElementById('band-data').value,
+                titolo_brano_libera_scelta: document.getElementById('band-titolo-libera').value,
+                autore_brano_libera_scelta: document.getElementById('band-autore-libera').value
+            };
+
+            const { error } = await supabase
+                .from('bande')
+                .insert([bandData]);
+
+            if (error) {
+                showAlert('Errore nell\'inserimento: ' + error.message, 'danger');
+                return;
+            }
+
+            showAlert('Banda aggiunta con successo!', 'success');
+            e.target.reset();
+            await loadBands();
+        }
+
+        async function loadVotes() {
+            const container = document.getElementById('votes-list');
+            container.innerHTML = '<div class="loading">Caricamento voti...</div>';
+
+            const { data: votes, error } = await supabase
+                .from('voti')
+                .select(`
+                    *,
+                    profili_utenti (email),
+                    bande (nome, categorie(nome))
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                container.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei voti</div>';
+                return;
+            }
+
+            if (votes.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-light);">Nessun voto registrato</p>';
+                return;
+            }
+
+            const votesByBand = {};
+            votes.forEach(vote => {
+                const bandName = vote.bande.nome;
+                if (!votesByBand[bandName]) {
+                    votesByBand[bandName] = [];
+                }
+                votesByBand[bandName].push(vote);
+            });
+
+            let html = '';
+            Object.keys(votesByBand).forEach(bandName => {
+                const bandVotes = votesByBand[bandName];
+                
+                html += `
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h4 style="color: var(--primary); margin-bottom: 1rem;">
+                            ${bandName}
+                        </h4>
+                        <div style="overflow-x: auto;">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Giurato</th>
+                                        <th>Brano</th>
+                                        <th>Intonazione</th>
+                                        <th>Qualità</th>
+                                        <th>Tecnica</th>
+                                        <th>Insieme</th>
+                                        <th>Espressione</th>
+                                        <th>Interpretazione</th>
+                                        <th>Voto Finale</th>
+                                        <th>Stato</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${bandVotes.map(vote => `
+                                        <tr>
+                                            <td>${vote.profili_utenti.email}</td>
+                                            <td>${vote.tipo_brano === 'obbligo' ? 'Obbligo' : 'Libera Scelta'}</td>
+                                            <td>${vote.intonazione || '--'}</td>
+                                            <td>${vote.qualita_suono || '--'}</td>
+                                            <td>${vote.tecnica || '--'}</td>
+                                            <td>${vote.insieme_ritmica || '--'}</td>
+                                            <td>${vote.espressione_dinamica || '--'}</td>
+                                            <td>${vote.interpretazione || '--'}</td>
+                                            <td><strong>${vote.voto_finale_brano || '--'}</strong></td>
+                                            <td>${vote.completato ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-warning">Parziale</span>'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // --- Tab Voti Giuria: inserimento voto finale concorso ---
+
+        async function loadJuryBandsForSelectedCategory() {
+            const container = document.getElementById('jury-list');
+            const categoryId = document.getElementById('jury-category-filter').value || null;
+
+            if (!categoryId) {
+                container.innerHTML = `
+                    <div class="alert alert-info">
+                        Seleziona una categoria per vedere le bande e inserire i voti della giuria.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '<div class="loading">Caricamento bande...</div>';
+
+            const { data, error } = await supabase
+                .from('bande')
+                .select(`
+                    *,
+                    categorie (nome)
+                `)
+                .eq('categoria_id', categoryId)
+                .order('data_esibizione')
+                .order('nome');
+
+            if (error) {
+                console.error('Errore caricamento bande per voti giuria:', error);
+                container.innerHTML = '<div class="alert alert-danger">Errore nel caricamento delle bande</div>';
+                return;
+            }
+
+            const localBands = data || [];
+
+            if (localBands.length === 0) {
+                container.innerHTML = `
+                    <div class="alert alert-info">
+                        Nessuna banda trovata per la categoria selezionata.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div style="overflow-x: auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Banda</th>
+                                <th>Categoria</th>
+                                <th>Direttore</th>
+                                <th>Voto Giuria Concorso</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            html += localBands.map(band => `
+                <tr>
+                    <td><strong>${band.nome}</strong></td>
+                    <td>${band.categorie.nome}</td>
+                    <td>${band.direttore}</td>
+                    <td>
+                        <input 
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value="${band.voto_finale_giuria ?? ''}"
+                            onchange="updateJuryScore('${band.id}', this.value)"
+                            class="form-control"
+                            style="width: 110px;"
+                            placeholder="0-100"
+                        >
+                    </td>
+                </tr>
+            `).join('');
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        window.updateJuryScore = async (bandId, score) => {
+            const numScore = parseFloat(score);
+            
+            if (isNaN(numScore) || numScore < 0 || numScore > 100) {
+                alert('Inserisci un voto valido tra 0 e 100 (0-100, max 2 decimali)');
+                return;
+            }
+
+            const rounded = Math.round(numScore * 100) / 100;
+
+            const { error } = await supabase
+                .from('bande')
+                .update({ voto_finale_giuria: rounded })
+                .eq('id', bandId);
+
+            if (error) {
+                showAlert('Errore nell\'aggiornamento del voto della giuria: ' + error.message, 'danger');
+                return;
+            }
+
+            showAlert('Voto finale della giuria aggiornato!', 'success');
+        };
+
+        // --- Tab Risultati (come già definito) ---
+
+        async function loadResults() {
+            const container = document.getElementById('results-list');
+            container.innerHTML = '<div class="loading">Caricamento risultati...</div>';
+
+            const selectedCategoryId = document.getElementById('results-category-filter').value || null;
+
+            try {
+                const { data: bandsData, error } = await supabase
+                    .from('bande')
+                    .select(`
+                        *,
+                        categorie (nome)
+                    `);
+
+                if (error) {
+                    console.error('Errore caricamento bande per risultati:', error);
+                    container.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei risultati</div>';
+                    return;
+                }
+
+                let localBands = bandsData || [];
+
+                if (selectedCategoryId) {
+                    localBands = localBands.filter(b => b.categoria_id === selectedCategoryId);
+                }
+
+                const results = [];
+                for (const band of localBands) {
+                    const { data, error: fnError } = await supabase
+                        .rpc('get_media_finale_banda', { p_banda_id: band.id });
+
+                    if (fnError) {
+                        console.error('Errore media finale per banda', band.id, fnError);
+                    }
+
+                    const mediaGiurati = Array.isArray(data) ? data[0] : data;
+
+                    results.push({
+                        id: band.id,
+                        nome: band.nome,
+                        categoria: band.categorie.nome,
+                        mediaGiurati: mediaGiurati !== null ? parseFloat(mediaGiurati).toFixed(2) : null,
+                        votoGiuria: band.voto_finale_giuria !== null ? parseFloat(band.voto_finale_giuria).toFixed(2) : null
+                    });
+                }
+
+                results.sort((a, b) => {
+                    const va = a.votoGiuria === null ? -1 : parseFloat(a.votoGiuria);
+                    const vb = b.votoGiuria === null ? -1 : parseFloat(b.votoGiuria);
+                    return vb - va;
+                });
+
+                if (results.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-info">
+                            Nessuna banda trovata per la categoria selezionata.
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <div style="overflow-x: auto;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Banda</th>
+                                    <th>Categoria</th>
+                                    <th>Media Giurati</th>
+                                    <th>Voto Giuria Concorso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                html += results.map(r => `
+                    <tr>
+                        <td><strong>${r.nome}</strong></td>
+                        <td>${r.categoria}</td>
+                        <td>
+                            ${r.mediaGiurati !== null 
+                                ? `<strong>${r.mediaGiurati}</strong>` 
+                                : '<span style="color: var(--text-light);">--</span>'}
+                        </td>
+                        <td>
+                            ${r.votoGiuria !== null
+                                ? `<strong style="color: var(--secondary);">${r.votoGiuria}</strong>`
+                                : '<span style="color: var(--text-light);">--</span>'}
+                        </td>
+                    </tr>
+                `).join('');
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+
+            } catch (err) {
+                console.error('Errore risultati:', err);
+                container.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei risultati</div>';
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('it-IT', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

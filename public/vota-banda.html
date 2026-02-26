@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vota Banda - DIBA BandContest</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-brand">🎺 DIBA BandContest - Votazione</div>
+        <div class="navbar-user">
+            <a href="giurato-dashboard.html" class="btn btn-outline">← Torna alla Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="alert-container"></div>
+
+        <!-- Info banda -->
+        <div id="band-info" class="card"></div>
+
+        <!-- Selezione brano -->
+        <div class="card">
+            <h2>Seleziona il Brano da Valutare</h2>
+            <div class="form-group">
+                <select id="song-select" class="form-control" style="font-size: 1.1rem;">
+                    <option value="">-- Scegli il brano --</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Form votazione -->
+        <div id="voting-form" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2 id="song-title"></h2>
+                    <div id="completion-status"></div>
+                </div>
+
+                <form id="vote-form">
+                    <div class="criteria-section">
+                        <!-- Criterio 1 -->
+                        <div class="criteria-item">
+                            <label for="intonazione">
+                                1. Intonazione
+                                <span style="color: var(--text-light); font-weight: normal;">
+                                    (Precisione delle note)
+                                </span>
+                            </label>
+                            <div class="criteria-input">
+                                <input 
+                                    type="range" 
+                                    id="intonazione" 
+                                    name="intonazione"
+                                    min="0" 
+                                    max="100" 
+                                    value="0"
+                                    class="form-control"
+                                    style="flex: 3;"
+                                >
+                                <input 
+                                    type="number" 
+                                    id="intonazione-num"
+                                    min="0" 
+                                    max="100"
+                                    class="form-control"
+                                    style="width: 80px;"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Criterio 2 -->
+                        <div class="criteria-item">
+                            <label for="qualita_suono">
+                                2. Qualità e Bilanciamento del Suono
+                                <span style="color: var(--text-light); font-weight: normal;">
+                                    (Timbro e equilibrio tra sezioni)
+                                </span>
+                            </label>
+                            <div class="criteria-input">
+                                <input 
+                                    type="range" 
+                                    id="qualita_suono" 
+                                    name="qualita_suono"
+                                    min="0" 
+                                    max="100" 
+                                    value="0"
+                                    class="form-control"
+                                    style="flex: 3;"
+                                >
+                                <input 
+                                    type="number" 
+                                    id="qualita_suono-num"
+                                    min="0" 
+                                    max="100"
+                                    class="form-control"
+                                    style="width: 80px;"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Criterio 3 -->
+                        <div class="criteria-item">
+                            <label for="tecnica">
+                                3. Tecnica e Articolazione
+                                <span style="color: var(--text-light); font-weight: normal;">
+                                    (Pulizia e chiarezza dell'esecuzione)
+                                </span>
+                            </label>
+                            <div class="criteria-input">
+                                <input 
+                                    type="range" 
+                                    id="tecnica" 
+                                    name="tecnica"
+                                    min="0" 
+                                    max="100" 
+                                    value="0"
+                                    class="form-control"
+                                    style="flex: 3;"
+                                >
+                                <input 
+                                    type="number" 
+                                    id="tecnica-num"
+                                    min="0" 
+                                    max="100"
+                                    class="form-control"
+                                    style="width: 80px;"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Criterio 4 -->
+                        <div class="criteria-item">
+                            <label for="insieme_ritmica">
+                                4. Insieme e Ritmica
+                                <span style="color: var(--text-light); font-weight: normal;">
+                                    (Coordinazione e precisione ritmica)
+                                </span>
+                            </label>
+                            <div class="criteria-input">
+                                <input 
+                                    type="range" 
+                                    id="insieme_ritmica" 
+                                    name="insieme_ritmica"
+                                    min="0" 
+                                    max="100" 
+                                    value="0"
+                                    class="form-control"
+                                    style="flex: 3;"
+                                >
+                                <input 
+                                    type="number" 
+                                    id="insieme_ritmica-num"
+                                    min="0" 
+                                    max="100"
+                                    class="form-control"
+                                    style="width: 80px;"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Criterio 5 -->
+                        <div class="criteria-item">
+                            <label for="espressione_dinamica">
+                                5. Espressione e Dinamica
+                                <span style="color: var(--text-light); font-weight: normal;">
+                                    (Variazioni di intensità e feeling)
+                                </span>
+                            </label>
+                            <div class="criteria-input">
+                                <input 
+                                    type="range" 
+                                    id="espressione_dinamica" 
+                                    name="espressione_dinamica"
+                                    min="0" 
+                                    max="100" 
+                                    value="0"
+                                    class="form-control"
+                                    style="flex: 3;"
+                                >
+                                <input 
+                                    type="number" 
+                                    id="espressione_dinamica-num"
+                                    min="0" 
+                                    max="100"
+                                    class="form-control"
+                                    style="width: 80px;"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Criterio 6 -->
+                        <div class="criteria-item">
+                            <label for="interpretazione">
+                                6. Interpretazione
+                                <span style="color: var(--text-light); font-weight: normal;">
+                                    (Musicalità e coinvolgimento emotivo)
+                                </span>
+                            </label>
+                            <div class="criteria-input">
+                                <input 
+                                    type="range" 
+                                    id="interpretazione" 
+                                    name="interpretazione"
+                                    min="0" 
+                                    max="100" 
+                                    value="0"
+                                    class="form-control"
+                                    style="flex: 3;"
+                                >
+                                <input 
+                                    type="number" 
+                                    id="interpretazione-num"
+                                    min="0" 
+                                    max="100"
+                                    class="form-control"
+                                    style="width: 80px;"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Voto finale previsto -->
+                    <div class="card" style="background: var(--bg); margin-top: 2rem;">
+                        <h3 style="text-align: center; color: var(--primary);">
+                            Voto Finale Previsto
+                        </h3>
+                        <div style="text-align: center; font-size: 3rem; font-weight: bold; color: var(--primary);">
+                            <span id="final-score">--</span>/100
+                        </div>
+                        <p style="text-align: center; color: var(--text-light); margin-top: 0.5rem;">
+                            Media dei criteri (arrotondata per difetto)
+                        </p>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full" style="margin-top: 2rem; font-size: 1.2rem;">
+                        💾 Salva Voto
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+        import { supabase, checkAuth, getUserProfile, areVotingsClosed } from './supabase-client.js';
+
+        let currentUser = null;
+        let currentBand = null;
+        let currentSong = null;
+        let votingsClosed = false;
+
+        const criteria = ['intonazione', 'qualita_suono', 'tecnica', 'insieme_ritmica', 'espressione_dinamica', 'interpretazione'];
+
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alert-container');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+            window.scrollTo(0, 0);
+        }
+
+        async function init() {
+            currentUser = await checkAuth();
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const userProfile = await getUserProfile(currentUser.id);
+            if (!userProfile || userProfile.ruolo !== 'giurato') {
+                showAlert('Accesso negato.', 'danger');
+                setTimeout(() => window.location.href = 'index.html', 2000);
+                return;
+            }
+
+            votingsClosed = await areVotingsClosed();
+            if (votingsClosed) {
+                showAlert('Le votazioni sono chiuse. Puoi solo consultare i voti già espressi.', 'warning');
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const bandId = urlParams.get('id');
+
+            if (!bandId) {
+                showAlert('Banda non specificata', 'danger');
+                setTimeout(() => window.location.href = 'giurato-dashboard.html', 2000);
+                return;
+            }
+
+            await loadBand(bandId);
+            setupCriteriaInputs();
+        }
+
+        async function loadBand(bandId) {
+            const { data, error } = await supabase
+                .from('bande')
+                .select(`
+                    *,
+                    categorie (
+                        nome,
+                        titolo_brano_obbligo,
+                        autore_brano_obbligo
+                    )
+                `)
+                .eq('id', bandId)
+                .single();
+
+            if (error || !data) {
+                console.error('Errore caricamento banda:', error);
+                showAlert('Banda non trovata', 'danger');
+                return;
+            }
+
+            currentBand = data;
+            displayBandInfo();
+            populateSongSelect();
+        }
+
+        function displayBandInfo() {
+            const container = document.getElementById('band-info');
+            container.innerHTML = `
+                <h2 style="color: var(--primary); margin-bottom: 1rem;">
+                    ${currentBand.nome}
+                </h2>
+                <div class="grid grid-2">
+                    <div>
+                        <p><strong>Categoria:</strong> ${currentBand.categorie.nome}</p>
+                        <p><strong>Direttore:</strong> ${currentBand.direttore}</p>
+                        <p><strong>Provenienza:</strong> ${currentBand.citta}, ${currentBand.nazione}</p>
+                    </div>
+                    <div>
+                        <p><strong>Data Esibizione:</strong> ${formatDate(currentBand.data_esibizione)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function populateSongSelect() {
+            const select = document.getElementById('song-select');
+            select.innerHTML = `
+                <option value="">-- Scegli il brano --</option>
+                <option value="obbligo">
+                    Brano d'Obbligo: ${currentBand.categorie.titolo_brano_obbligo} 
+                    (${currentBand.categorie.autore_brano_obbligo})
+                </option>
+                <option value="libera_scelta">
+                    Brano a Libera Scelta: ${currentBand.titolo_brano_libera_scelta} 
+                    (${currentBand.autore_brano_libera_scelta})
+                </option>
+            `;
+
+            select.addEventListener('change', handleSongChange);
+        }
+
+        async function handleSongChange(e) {
+            currentSong = e.target.value;
+            
+            if (!currentSong) {
+                document.getElementById('voting-form').style.display = 'none';
+                return;
+            }
+
+            const songTitle = document.getElementById('song-title');
+            if (currentSong === 'obbligo') {
+                songTitle.textContent = `Brano d'Obbligo: ${currentBand.categorie.titolo_brano_obbligo}`;
+            } else {
+                songTitle.textContent = `Brano a Libera Scelta: ${currentBand.titolo_brano_libera_scelta}`;
+            }
+
+            await loadExistingVote();
+            document.getElementById('voting-form').style.display = 'block';
+        }
+
+        async function loadExistingVote() {
+            const { data, error } = await supabase
+                .from('voti')
+                .select('*')
+                .eq('giurato_id', currentUser.id)
+                .eq('banda_id', currentBand.id)
+                .eq('tipo_brano', currentSong)
+                .single();
+
+            if (data) {
+                criteria.forEach(criterion => {
+                    if (data[criterion] !== null) {
+                        document.getElementById(criterion).value = data[criterion];
+                        document.getElementById(`${criterion}-num`).value = data[criterion];
+                    }
+                });
+                updateFinalScore();
+
+                const statusDiv = document.getElementById('completion-status');
+                if (data.completato) {
+                    statusDiv.innerHTML = '<span class="badge badge-success">✓ Voto Completato</span>';
+                } else {
+                    statusDiv.innerHTML = '<span class="badge badge-warning">⚠️ Voto Incompleto</span>';
+                }
+            }
+        }
+
+        function setupCriteriaInputs() {
+            criteria.forEach(criterion => {
+                const slider = document.getElementById(criterion);
+                const numberInput = document.getElementById(`${criterion}-num`);
+
+                slider.addEventListener('input', (e) => {
+                    numberInput.value = e.target.value;
+                    updateFinalScore();
+                });
+
+                numberInput.addEventListener('input', (e) => {
+                    let value = parseInt(e.target.value) || 0;
+                    if (value > 100) value = 100;
+                    if (value < 0) value = 0;
+                    slider.value = value;
+                    numberInput.value = value;
+                    updateFinalScore();
+                });
+            });
+
+            document.getElementById('vote-form').addEventListener('submit', handleSubmit);
+        }
+
+        function updateFinalScore() {
+            let sum = 0;
+            let count = 0;
+
+            criteria.forEach(criterion => {
+                const value = parseInt(document.getElementById(criterion).value);
+                if (value > 0) {
+                    sum += value;
+                    count++;
+                }
+            });
+
+            // MODIFICATO: Calcolo con 2 decimali
+            const average = count === 6 ? (sum / 6).toFixed(2) : '--';
+            document.getElementById('final-score').textContent = average;
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            if (votingsClosed) {
+                showAlert('Le votazioni sono chiuse. Non è possibile modificare i voti.', 'danger');
+                return;
+            }
+
+            const votes = {};
+            criteria.forEach(criterion => {
+                const value = parseInt(document.getElementById(criterion).value);
+                votes[criterion] = value > 0 ? value : null;
+            });
+
+            const hasVotes = Object.values(votes).some(v => v !== null);
+            if (!hasVotes) {
+                showAlert('Inserisci almeno un voto prima di salvare', 'warning');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('voti')
+                    .upsert({
+                        giurato_id: currentUser.id,
+                        banda_id: currentBand.id,
+                        tipo_brano: currentSong,
+                        ...votes
+                    }, {
+                        onConflict: 'giurato_id,banda_id,tipo_brano'
+                    });
+
+                if (error) throw error;
+
+                showAlert('Voto salvato con successo! ✓', 'success');
+                
+                setTimeout(() => {
+                    loadExistingVote();
+                }, 1000);
+
+            } catch (error) {
+                console.error('Errore salvataggio voto:', error);
+                showAlert('Errore nel salvataggio del voto: ' + error.message, 'danger');
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('it-IT', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

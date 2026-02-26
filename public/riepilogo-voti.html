@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riepilogo Voti - DIBA BandContest</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Layout responsive per il riepilogo */
+
+        /* Mobile: mostra card, nasconde tabella */
+        @media (max-width: 768px) {
+            .summary-table-wrapper {
+                display: none;
+            }
+
+            .summary-cards {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .summary-card {
+                background: var(--surface);
+                border-radius: 12px;
+                box-shadow: 0 2px 4px var(--shadow);
+                padding: 1rem 1.25rem;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .summary-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .summary-card-title {
+                font-weight: 600;
+            }
+
+            .summary-card-subtitle {
+                font-size: 0.85rem;
+                color: var(--text-light);
+            }
+
+            .summary-card-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.95rem;
+                gap: 0.75rem;
+            }
+
+            .summary-card-label {
+                color: var(--text-light);
+            }
+
+            .summary-card-value {
+                font-weight: 600;
+            }
+
+            .summary-card-value-strong {
+                font-weight: 700;
+                color: var(--primary);
+            }
+
+            .summary-card-giuria {
+                color: var(--secondary);
+                font-weight: 700;
+            }
+        }
+
+        /* Desktop: mostra tabella, nasconde card */
+        @media (min-width: 769px) {
+            .summary-table-wrapper {
+                display: block;
+            }
+            .summary-cards {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-brand">🎺 DIBA BandContest - Riepilogo Voti</div>
+        <div class="navbar-user">
+            <a href="giurato-dashboard.html" class="btn btn-outline" style="margin-right: 0.5rem;">
+                ← Torna alla Dashboard
+            </a>
+            <button id="downloadCsvBtn" class="btn btn-primary">
+                Scarica risultati
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>📊 Riepilogo dei Tuoi Voti</h2>
+            <p style="color: var(--text-light); margin-bottom: 2rem;">
+                Visualizza e scarica tutti i voti che hai espresso, le medie degli altri giurati e i voti finali della giuria
+            </p>
+
+            <div id="summary-container" class="loading">Caricamento dati...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase, checkAuth, getUserProfile } from './supabase-client.js';
+
+        let currentUser = null;
+        // conserveremo questi per riusarli nel CSV
+        let _bandsForCsv = [];
+        let _myVotesForCsv = [];
+        let _statsPerBandaForCsv = {};
+
+        async function init() {
+            currentUser = await checkAuth();
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const userProfile = await getUserProfile(currentUser.id);
+            if (!userProfile || userProfile.ruolo !== 'giurato') {
+                alert('Accesso negato.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            document.getElementById('downloadCsvBtn').addEventListener('click', handleDownloadCsv);
+
+            await loadSummary();
+        }
+
+        async function loadSummary() {
+            const container = document.getElementById('summary-container');
+
+            try {
+                const { data: bands, error: bandsError } = await supabase
+                    .from('bande')
+                    .select(`
+                        *,
+                        categorie (nome)
+                    `)
+                    .order('categorie(nome)')
+                    .order('nome');
+
+                if (bandsError) throw bandsError;
+
+                const { data: myVotes, error: votesError } = await supabase
+                    .from('voti')
+                    .select('*')
+                    .eq('giurato_id', currentUser.id);
+
+                if (votesError) throw votesError;
+
+                const votedBands = bands.filter(band =>
+                    myVotes.some(vote => vote.banda_id === band.id)
+                );
+
+                if (votedBands.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-info">
+                            Non hai ancora votato nessuna banda. 
+                            <a href="giurato-dashboard.html" style="color: var(--primary); font-weight: 600;">
+                                Vai alla dashboard per iniziare
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const statsPerBanda = {};
+                for (const band of votedBands) {
+                    const { data, error } = await supabase
+                        .rpc('get_media_giurati_banda', {
+                            p_banda_id: band.id,
+                            p_escludi_giurato: currentUser.id
+                        });
+
+                    if (error) {
+                        console.error('Errore media giurati per banda', band.id, error);
+                        statsPerBanda[band.id] = { media: null, count: 0 };
+                    } else if (Array.isArray(data) && data.length > 0) {
+                        const row = data[0];
+                        statsPerBanda[band.id] = {
+                            media: row.media_giurati,
+                            count: row.num_giurati
+                        };
+                    } else {
+                        statsPerBanda[band.id] = { media: null, count: 0 };
+                    }
+                }
+
+                // salva per il CSV
+                _bandsForCsv = votedBands;
+                _myVotesForCsv = myVotes;
+                _statsPerBandaForCsv = statsPerBanda;
+
+                renderSummary(votedBands, myVotes, statsPerBanda);
+
+            } catch (error) {
+                console.error('Errore caricamento riepilogo:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        Errore nel caricamento dei dati
+                    </div>
+                `;
+            }
+        }
+
+        function renderSummary(bands, myVotes, statsPerBanda) {
+            const container = document.getElementById('summary-container');
+
+            let tableHtml = `
+                <div class="summary-table-wrapper" style="overflow-x: auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Banda</th>
+                                <th>Categoria</th>
+                                <th>Tuo Voto<br>Brano d'Obbligo</th>
+                                <th>Tuo Voto<br>Libera Scelta</th>
+                                <th>Tuo Voto<br>Finale</th>
+                                <th>Media Altri<br>Giurati</th>
+                                <th>Voto Finale<br>Giuria</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            let cardsHtml = `
+                <div class="summary-cards">
+            `;
+
+            bands.forEach(band => {
+                const myObbligoVote = myVotes.find(
+                    v => v.banda_id === band.id && v.tipo_brano === 'obbligo'
+                );
+                const myLiberaVote  = myVotes.find(
+                    v => v.banda_id === band.id && v.tipo_brano === 'libera_scelta'
+                );
+
+                const myObbligoScore = myObbligoVote?.voto_finale_brano != null
+                    ? parseFloat(myObbligoVote.voto_finale_brano).toFixed(2)
+                    : '--';
+
+                const myLiberaScore = myLiberaVote?.voto_finale_brano != null
+                    ? parseFloat(myLiberaVote.voto_finale_brano).toFixed(2)
+                    : '--';
+
+                let myFinalScore = '--';
+                if (myObbligoVote?.completato && myLiberaVote?.completato) {
+                    const obbligo = parseFloat(myObbligoVote.voto_finale_brano);
+                    const libera  = parseFloat(myLiberaVote.voto_finale_brano);
+                    myFinalScore  = ((obbligo + libera) / 2).toFixed(2);
+                }
+
+                const stats = statsPerBanda[band.id] || { media: null, count: 0 };
+                const mediaAltri = stats.media;
+                const numGiurati = stats.count;
+
+                const mediaAltriTableText =
+                    mediaAltri != null
+                        ? `${parseFloat(mediaAltri).toFixed(2)} (${numGiurati})`
+                        : '— (0)';
+
+                const mediaAltriCardText = mediaAltriTableText;
+
+                const votoGiuriaText = band.voto_finale_giuria !== null
+                    ? parseFloat(band.voto_finale_giuria).toFixed(2)
+                    : '--';
+
+                // Riga tabella (desktop)
+                tableHtml += `
+                    <tr>
+                        <td><strong>${band.nome}</strong></td>
+                        <td>${band.categorie.nome}</td>
+                        <td style="text-align: center;">
+                            ${formatScore(myObbligoScore, myObbligoVote?.completato)}
+                        </td>
+                        <td style="text-align: center;">
+                            ${formatScore(myLiberaScore, myLiberaVote?.completato)}
+                        </td>
+                        <td style="text-align: center;">
+                            <strong style="color: var(--primary); font-size: 1.1rem;">
+                                ${myFinalScore}
+                            </strong>
+                        </td>
+                        <td style="text-align: center;">
+                            ${mediaAltriTableText}
+                        </td>
+                        <td style="text-align: center;">
+                            <strong style="color: var(--secondary);">
+                                ${votoGiuriaText}
+                            </strong>
+                        </td>
+                    </tr>
+                `;
+
+                // Card mobile
+                cardsHtml += `
+                    <div class="summary-card">
+                        <div class="summary-card-header">
+                            <div>
+                                <div class="summary-card-title">${band.nome}</div>
+                                <div class="summary-card-subtitle">
+                                    ${band.categorie.nome}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="summary-card-row">
+                            <div class="summary-card-label">Tuo voto obbligo</div>
+                            <div class="summary-card-value">
+                                ${formatScoreText(myObbligoScore, myObbligoVote?.completato)}
+                            </div>
+                        </div>
+
+                        <div class="summary-card-row">
+                            <div class="summary-card-label">Tuo voto libera scelta</div>
+                            <div class="summary-card-value">
+                                ${formatScoreText(myLiberaScore, myLiberaVote?.completato)}
+                            </div>
+                        </div>
+
+                        <div class="summary-card-row">
+                            <div class="summary-card-label">Tuo voto finale</div>
+                            <div class="summary-card-value-strong">
+                                ${myFinalScore}
+                            </div>
+                        </div>
+
+                        <div class="summary-card-row">
+                            <div class="summary-card-label">Media altri giurati</div>
+                            <div class="summary-card-value">
+                                ${mediaAltriCardText}
+                            </div>
+                        </div>
+
+                        <div class="summary-card-row">
+                            <div class="summary-card-label">Voto giuria concorso</div>
+                            <div class="summary-card-giuria">
+                                ${votoGiuriaText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            cardsHtml += `
+                </div>
+            `;
+
+            container.innerHTML = tableHtml + cardsHtml + `
+                <div class="alert alert-info" style="margin-top: 2rem;">
+                    <strong>Legenda:</strong><br>
+                    • <strong>Tuo Voto Finale</strong>: Media dei tuoi voti per i due brani (con 2 decimali)<br>
+                    • <strong>Media Altri Giurati</strong>: Media dei voti finali di tutti gli altri giurati, escluso il tuo, con il numero di giurati tra parentesi<br>
+                    • <strong>Voto Finale Giuria</strong>: Voto ufficiale assegnato dalla giuria del concorso (con 2 decimali)
+                </div>
+            `;
+        }
+
+        function formatScore(score, completed) {
+            if (score === '--') {
+                return '<span style="color: var(--text-light);">--</span>';
+            }
+            if (!completed) {
+                return `<span style="color: var(--warning);">${score} ⚠️</span>`;
+            }
+            return `<strong>${score}</strong>`;
+        }
+
+        function formatScoreText(score, completed) {
+            if (score === '--') {
+                return '<span style="color: var(--text-light);">--</span>';
+            }
+            if (!completed) {
+                return `<span style="color: var(--warning);">${score} ⚠️</span>`;
+            }
+            return `<span>${score}</span>`;
+        }
+
+        // Generazione CSV e download
+        function handleDownloadCsv() {
+            if (!_bandsForCsv.length) {
+                alert('Non ci sono risultati da esportare.');
+                return;
+            }
+
+            const headers = [
+                'Banda',
+                'Categoria',
+                'Tuo voto obbligo',
+                'Tuo voto libera scelta',
+                'Tuo voto finale',
+                'Media altri giurati',
+                'Numero altri giurati',
+                'Voto giuria concorso'
+            ];
+
+            const rows = [_bandsForCsv.map(() => null)];
+
+            const lines = [];
+            lines.push(headers.join(';'));
+
+            _bandsForCsv.forEach(band => {
+                const myObbligoVote = _myVotesForCsv.find(
+                    v => v.banda_id === band.id && v.tipo_brano === 'obbligo'
+                );
+                const myLiberaVote  = _myVotesForCsv.find(
+                    v => v.banda_id === band.id && v.tipo_brano === 'libera_scelta'
+                );
+
+                const myObbligoScore = myObbligoVote?.voto_finale_brano != null
+                    ? parseFloat(myObbligoVote.voto_finale_brano).toFixed(2)
+                    : '';
+
+                const myLiberaScore = myLiberaVote?.voto_finale_brano != null
+                    ? parseFloat(myLiberaVote.voto_finale_brano).toFixed(2)
+                    : '';
+
+                let myFinalScore = '';
+                if (myObbligoVote?.completato && myLiberaVote?.completato) {
+                    const obbligo = parseFloat(myObbligoVote.voto_finale_brano);
+                    const libera  = parseFloat(myLiberaVote.voto_finale_brano);
+                    myFinalScore  = ((obbligo + libera) / 2).toFixed(2);
+                }
+
+                const stats = _statsPerBandaForCsv[band.id] || { media: null, count: 0 };
+                const mediaAltri = stats.media != null
+                    ? parseFloat(stats.media).toFixed(2)
+                    : '';
+                const numGiurati = stats.count || 0;
+
+                const votoGiuria = band.voto_finale_giuria !== null
+                    ? parseFloat(band.voto_finale_giuria).toFixed(2)
+                    : '';
+
+                const row = [
+                    band.nome,
+                    band.categorie.nome,
+                    myObbligoScore,
+                    myLiberaScore,
+                    myFinalScore,
+                    mediaAltri,
+                    numGiurati.toString(),
+                    votoGiuria
+                ].map(value => {
+                    const v = value ?? '';
+                    return `"${v.replace(/"/g, '""')}"`;
+                });
+
+                lines.push(row.join(';'));
+            });
+
+            const csvContent = lines.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'riepilogo_voti.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        init();
+    </script>
+</body>
+</html>
